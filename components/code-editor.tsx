@@ -22,7 +22,6 @@ interface CodeEditorProps {
   initialTitle?: string;
   initialLanguage?: string;
   onSave?: (title: string, code: string, language: string) => void;
-  onShare?: () => void;
   readOnly?: boolean;
 }
 
@@ -41,7 +40,6 @@ export function CodeEditor({
   initialTitle = "Untitled Code Review",
   initialLanguage = "javascript",
   onSave,
-  onShare,
   readOnly = false,
 }: CodeEditorProps) {
   const [code, setCode] = useState(initialCode);
@@ -55,7 +53,9 @@ export function CodeEditor({
       // Get the code directly from Monaco Editor to preserve formatting
       const model = (window as any).monaco?.editor?.getModels()[0];
       // Ensure we preserve all whitespace
-      const formattedCode = model ? model.getValue().replace(/\n/g, '\n') : code;
+      const formattedCode = model
+        ? model.getValue().replace(/\n/g, "\n")
+        : code;
       onSave(title, formattedCode, language);
     }
   };
@@ -109,13 +109,7 @@ export function CodeEditor({
               <Copy className="h-4 w-4 mr-2" />
               Copy
             </Button>
-            {!readOnly && (
-              <Button variant="outline" size="sm" onClick={handleSave}>
-                <Save className="h-4 w-4 mr-2" />
-                Save
-              </Button>
-            )}
-            <Button size="sm" onClick={onShare}>
+            <Button size="sm" onClick={handleSave}>
               <Share2 className="h-4 w-4 mr-2" />
               Share
             </Button>

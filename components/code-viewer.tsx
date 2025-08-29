@@ -12,6 +12,7 @@ import Link from "next/link"
 import { CommentThread } from "@/components/comment-thread"
 import { highlightCode } from "@/lib/syntax-highlight"
 import { useTheme } from "next-themes"
+import { toast } from "sonner"
 
 interface CodeSnippet {
   id: string
@@ -85,9 +86,14 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
   const handleShare = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href)
-      // Could add toast notification here
+      toast.success("Link copied to clipboard!", {
+        description: "Share this link with your team to get their review.",
+      })
     } catch (err) {
       console.error("Failed to copy URL:", err)
+      toast.error("Failed to copy link", {
+        description: "Please try again or copy the URL manually.",
+      })
     }
   }
 
