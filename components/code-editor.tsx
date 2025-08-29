@@ -1,23 +1,29 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
-import { Copy, Save, Share2, Code2 } from "lucide-react"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { getSupportedLanguages } from "@/lib/syntax-highlight"
-import { useTheme } from "next-themes"
-import Editor from "@monaco-editor/react"
+import type React from "react";
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Copy, Save, Share2, Code2 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { getSupportedLanguages } from "@/lib/syntax-highlight";
+import { useTheme } from "next-themes";
+import Editor from "@monaco-editor/react";
 
 interface CodeEditorProps {
-  initialCode?: string
-  initialTitle?: string
-  initialLanguage?: string
-  onSave?: (title: string, code: string, language: string) => void
-  onShare?: () => void
-  readOnly?: boolean
+  initialCode?: string;
+  initialTitle?: string;
+  initialLanguage?: string;
+  onSave?: (title: string, code: string, language: string) => void;
+  onShare?: () => void;
+  readOnly?: boolean;
 }
 
 const DEFAULT_CODE = `// Welcome to CodeReview!
@@ -28,7 +34,7 @@ function example() {
   return 'Ready for review!';
 }
 
-example();`
+example();`;
 
 export function CodeEditor({
   initialCode = DEFAULT_CODE,
@@ -38,32 +44,39 @@ export function CodeEditor({
   onShare,
   readOnly = false,
 }: CodeEditorProps) {
-  const [code, setCode] = useState(initialCode)
-  const [title, setTitle] = useState(initialTitle)
-  const [language, setLanguage] = useState(initialLanguage)
-  const { theme } = useTheme()
-  const supportedLanguages = getSupportedLanguages()
+  const [code, setCode] = useState(initialCode);
+  const [title, setTitle] = useState(initialTitle);
+  const [language, setLanguage] = useState(initialLanguage);
+  const { theme } = useTheme();
+  const supportedLanguages = getSupportedLanguages();
 
   const handleSave = () => {
     if (onSave) {
-      onSave(title, code, language)
+      // Get the code directly from Monaco Editor to preserve formatting
+      const model = (window as any).monaco?.editor?.getModels()[0];
+      // Ensure we preserve all whitespace
+      const formattedCode = model ? model.getValue().replace(/\n/g, '\n') : code;
+      onSave(title, formattedCode, language);
     }
-  }
+  };
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(code)
+      // Get the code directly from Monaco Editor to preserve formatting
+      const model = (window as any).monaco?.editor?.getModels()[0];
+      const formattedCode = model ? model.getValue() : code;
+      await navigator.clipboard.writeText(formattedCode);
       // Could add toast notification here
     } catch (err) {
-      console.error("Failed to copy code:", err)
+      console.error("Failed to copy code:", err);
     }
-  }
+  };
 
   const handleEditorChange = (value: string | undefined) => {
     if (value !== undefined) {
-      setCode(value)
+      setCode(value);
     }
-  }
+  };
 
   return (
     <Card className="w-full max-w-6xl mx-auto">
@@ -152,5 +165,5 @@ export function CodeEditor({
         </div>
       </CardContent>
     </Card>
-  )
+  );
 }

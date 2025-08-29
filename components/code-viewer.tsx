@@ -184,29 +184,13 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
 
                   {/* Code content */}
                   <div ref={codeRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
-                    <div className="p-4 text-sm font-mono leading-6 text-foreground">
-                      {codeLines.map((line, index) => {
-                        const lineNumber = index + 1
-                        const hasComments = commentsByLine[lineNumber]?.length > 0
-                        const isSelected = selectedLine === lineNumber
-
-                        return (
-                          <div
-                            key={lineNumber}
-                            className={`cursor-pointer hover:bg-muted/50 px-2 py-0 rounded transition-colors ${
-                              hasComments ? "bg-blue-500/10" : ""
-                            } ${isSelected ? "bg-blue-500/20" : ""}`}
-                            onClick={() => handleLineClick(lineNumber)}
-                          >
-                            <div 
-                              className="shiki-line"
-                              dangerouslySetInnerHTML={{ 
-                                __html: highlightedCode.split('\n')[index] || '&nbsp;'
-                              }} 
-                            />
-                          </div>
-                        )
-                      })}
+                    <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
+                      <div
+                        className="whitespace-pre"
+                        dangerouslySetInnerHTML={{
+                          __html: highlightedCode,
+                        }}
+                      />
                     </div>
                   </div>
                 </div>

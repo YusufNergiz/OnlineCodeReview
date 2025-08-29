@@ -45,28 +45,29 @@ export async function highlightCode({
   lineNumbers = true,
 }: HighlightOptions): Promise<string> {
   const highlighter = await getShikiHighlighter();
-  const html = await highlighter.codeToHtml(code, {
+  
+  // Ensure we preserve whitespace in the code
+  const preservedCode = code.replace(/\r\n/g, '\n');
+  
+  return highlighter.codeToHtml(preservedCode, {
     lang,
     theme,
+    transformers: [{
+      pre(node) {
+        node.properties.class = 'shiki whitespace-pre';
+        node.properties.style = 'background: transparent';
+        return node;
+      },
+      code(node) {
+        node.properties.class = 'whitespace-pre';
+        return node;
+      },
+      line(node) {
+        node.properties.class = 'whitespace-pre';
+        return node;
+      }
+    }]
   });
-
-  if (!lineNumbers) {
-    return html;
-  }
-
-  // Add line numbers to the HTML
-  const lines = html.split('\n');
-  const lineNumbersHtml = lines.map((line, i) => {
-    if (line.includes('<pre') || line.includes('</pre>')) {
-      return line;
-    }
-    return line.replace(
-      '<span class="line">',
-      `<span class="line" data-line="${i + 1}">`
-    );
-  });
-
-  return lineNumbersHtml.join('\n');
 }
 
 // Helper to get supported languages

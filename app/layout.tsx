@@ -2,6 +2,7 @@ import type React from "react";
 import type { Metadata } from "next";
 import { GeistSans } from "geist/font/sans";
 import { GeistMono } from "geist/font/mono";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -11,15 +12,34 @@ export const metadata: Metadata = {
   generator: "v0.app",
 };
 
+// This is used to suppress the cz-shortcut-listen warning
+const removeShortcutAttribute = `
+  (function() {
+    if (typeof window !== 'undefined') {
+      window.addEventListener('load', function() {
+        document.body.removeAttribute('cz-shortcut-listen');
+      });
+    }
+  })();
+`;
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        {children}
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          {children}
+        </ThemeProvider>
+        <script dangerouslySetInnerHTML={{ __html: removeShortcutAttribute }} />
       </body>
     </html>
   );
