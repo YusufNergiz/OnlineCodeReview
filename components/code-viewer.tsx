@@ -9,10 +9,11 @@ import { Badge } from "@/components/ui/badge"
 import { Copy, MessageSquare, Share2, ArrowLeft } from "lucide-react"
 import { formatDistanceToNow } from "date-fns"
 import Link from "next/link"
-import { CommentThread } from "@/components/comment-thread"
+import { InlineComment } from "@/components/inline-comment"
 import { highlightCode } from "@/lib/syntax-highlight"
 import { useTheme } from "next-themes"
 import { toast } from "sonner"
+import { createClient } from "@/lib/supabase/client"
 
 interface CodeSnippet {
   id: string
@@ -31,6 +32,7 @@ interface Comment {
   author_name: string
   created_at: string
   updated_at: string
+  anonymous_user_id?: string | null
 }
 
 interface CodeViewerProps {
@@ -38,13 +40,14 @@ interface CodeViewerProps {
   comments: Comment[]
 }
 
-export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
+export function CodeViewer({ codeSnippet, comments: initialComments }: CodeViewerProps) {
   const [selectedLine, setSelectedLine] = useState<number | null>(null)
-  const [showComments, setShowComments] = useState(true)
+  const [comments, setComments] = useState(initialComments)
   const [highlightedCode, setHighlightedCode] = useState("")
   const lineNumbersRef = useRef<HTMLDivElement>(null)
   const codeRef = useRef<HTMLDivElement>(null)
   const { theme } = useTheme()
+  const supabase = createClient()
 
   const codeLines = codeSnippet.code.split("\n")
 
@@ -77,9 +80,10 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(codeSnippet.code)
-      // Could add toast notification here
+      toast.success("Code copied to clipboard!")
     } catch (err) {
       console.error("Failed to copy code:", err)
+      toast.error("Failed to copy code")
     }
   }
 
@@ -99,6 +103,31 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
 
   const handleLineClick = (lineNumber: number) => {
     setSelectedLine(selectedLine === lineNumber ? null : lineNumber)
+  }
+
+  const handleAddComment = async (lineNumber: number, text: string, authorName: string) => {
+    try {
+      const { data: comment, error } = await supabase
+        .from("code_comments")
+        .insert({
+          code_snippet_id: codeSnippet.id,
+          line_number: lineNumber,
+          comment_text: text,
+          author_name: authorName,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setComments((prev) => [...prev, comment])
+      setSelectedLine(null)
+      toast.success("Comment added successfully!")
+    } catch (error) {
+      console.error("Error adding comment:", error)
+      toast.error("Failed to add comment")
+      throw error
+    }
   }
 
   // Sync scroll between line numbers and code
@@ -132,10 +161,6 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setShowComments(!showComments)}>
-            <MessageSquare className="h-4 w-4 mr-2" />
-            {showComments ? "Hide" : "Show"} Comments ({comments.length})
-          </Button>
           <Button variant="outline" size="sm" onClick={handleCopy}>
             <Copy className="h-4 w-4 mr-2" />
             Copy Code
@@ -147,76 +172,102 @@ export function CodeViewer({ codeSnippet, comments }: CodeViewerProps) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Code Display */}
-        <div className="lg:col-span-2">
-          <Card>
-            <CardHeader className="pb-4">
-              <div className="flex items-center justify-between">
-                <Badge variant="secondary">{codeSnippet.language}</Badge>
-                <div className="text-sm text-muted-foreground">
-                  {codeLines.length} lines • {codeSnippet.code.length} characters
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-0">
-              <div className="relative border rounded-lg overflow-hidden bg-muted/30">
-                <div className="flex max-h-[600px] overflow-hidden">
-                  {/* Line numbers */}
-                  <div
-                    ref={lineNumbersRef}
-                    className="flex-shrink-0 bg-muted/50 text-muted-foreground text-sm font-mono leading-6 px-3 py-4 select-none overflow-y-auto"
-                    onScroll={handleScroll}
-                  >
-                    {codeLines.map((_, index) => {
-                      const lineNumber = index + 1
-                      const hasComments = commentsByLine[lineNumber]?.length > 0
-                      const isSelected = selectedLine === lineNumber
+      {/* Code Display */}
+      <Card>
+        <CardHeader className="pb-4">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary">{codeSnippet.language}</Badge>
+            <div className="text-sm text-muted-foreground">
+              {codeLines.length} lines • {codeSnippet.code.length} characters
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          <div className="relative border rounded-lg overflow-hidden bg-muted/30">
+            <div className="flex max-h-[600px] overflow-hidden">
+              {/* Line numbers */}
+              <div
+                ref={lineNumbersRef}
+                className="flex-shrink-0 bg-muted/50 text-muted-foreground text-sm font-mono leading-6 px-3 py-4 select-none overflow-y-auto"
+                onScroll={handleScroll}
+              >
+                {codeLines.map((_, index) => {
+                  const lineNumber = index + 1
+                  const hasComments = commentsByLine[lineNumber]?.length > 0
+                  const isSelected = selectedLine === lineNumber
+                  const prevLineHasComments = commentsByLine[lineNumber - 1]?.length > 0 || selectedLine === lineNumber - 1
 
-                      return (
+                  // Skip line number if previous line has comments
+                  if (prevLineHasComments) {
+                    return <div key={`space-${lineNumber}`} className="min-h-[24px]" />
+                  }
+
+                  return (
+                    <div
+                      key={lineNumber}
+                      className={`text-right min-w-[3rem] cursor-pointer hover:bg-muted/70 px-2 py-0 rounded transition-colors ${
+                        hasComments ? "bg-blue-500/20 text-blue-600 font-semibold" : ""
+                      } ${isSelected ? "bg-blue-500/30" : ""}`}
+                      onClick={() => handleLineClick(lineNumber)}
+                    >
+                      {lineNumber}
+                      {hasComments && <span className="ml-1 text-blue-500">●</span>}
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Code content */}
+              <div ref={codeRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
+                <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
+                  {codeLines.map((line, index) => {
+                    const lineNumber = index + 1
+                    const lineComments = commentsByLine[lineNumber] || []
+                    const isSelected = selectedLine === lineNumber
+                    const prevLineHasComments = commentsByLine[lineNumber - 1]?.length > 0 || selectedLine === lineNumber - 1
+
+                    return (
+                      <div key={lineNumber}>
+                        {/* Add spacing if previous line has comments */}
+                        {prevLineHasComments && (
+                          <div className="min-h-[24px]" />
+                        )}
+
+                        {/* Code line */}
                         <div
-                          key={lineNumber}
-                          className={`text-right min-w-[3rem] cursor-pointer hover:bg-muted/70 px-2 py-0 rounded transition-colors ${
-                            hasComments ? "bg-blue-500/20 text-blue-600 font-semibold" : ""
-                          } ${isSelected ? "bg-blue-500/30" : ""}`}
+                          className={`cursor-pointer hover:bg-muted/50 px-2 py-0 rounded transition-colors ${
+                            lineComments.length > 0 ? "bg-blue-500/10" : ""
+                          } ${isSelected ? "bg-blue-500/20" : ""}`}
                           onClick={() => handleLineClick(lineNumber)}
                         >
-                          {lineNumber}
-                          {hasComments && <span className="ml-1 text-blue-500">●</span>}
+                          <div 
+                            className="shiki-line"
+                            dangerouslySetInnerHTML={{ 
+                              __html: highlightedCode.split('\n')[index] || '&nbsp;'
+                            }} 
+                          />
                         </div>
-                      )
-                    })}
-                  </div>
 
-                  {/* Code content */}
-                  <div ref={codeRef} className="flex-1 overflow-y-auto" onScroll={handleScroll}>
-                    <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
-                      <div
-                        className="whitespace-pre"
-                        dangerouslySetInnerHTML={{
-                          __html: highlightedCode,
-                        }}
-                      />
-                    </div>
-                  </div>
+                        {/* Inline comments */}
+                        {(lineComments.length > 0 || isSelected) && (
+                          <InlineComment
+                            comments={lineComments}
+                            onAddComment={async (text, authorName) => {
+                              await handleAddComment(lineNumber, text, authorName)
+                            }}
+                            onCancel={() => setSelectedLine(null)}
+                            isNew={isSelected}
+                          />
+                        )}
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Comments Panel */}
-        {showComments && (
-          <div className="lg:col-span-1">
-            <CommentThread
-              codeSnippetId={codeSnippet.id}
-              selectedLine={selectedLine}
-              commentsByLine={commentsByLine}
-              onLineSelect={setSelectedLine}
-            />
+            </div>
           </div>
-        )}
-      </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }
