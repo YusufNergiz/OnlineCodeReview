@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, MessageSquare, Share2, ArrowLeft } from "lucide-react";
+import { Copy, MessageSquare, Share2, ArrowLeft, Eye, EyeOff } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { InlineComment } from "@/components/inline-comment";
@@ -50,6 +50,7 @@ export function CodeViewer({
   const [commentHeights, setCommentHeights] = useState<Record<number, number>>(
     {}
   );
+  const [commentsHidden, setCommentsHidden] = useState(false);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLDivElement>(null);
   const { theme } = useTheme();
@@ -189,17 +190,17 @@ export function CodeViewer({
         <div
           key={`line-${lineNumber}`}
           className={`text-right min-w-[3rem] cursor-pointer hover:bg-muted/70 px-2 py-0 rounded transition-colors ${
-            hasComments ? "bg-blue-500/20 text-blue-600 font-semibold" : ""
-          } ${isSelected ? "bg-blue-500/30" : ""}`}
+            hasComments && !commentsHidden ? "bg-blue-500/20 text-blue-600 font-semibold" : ""
+          } ${isSelected && !commentsHidden ? "bg-blue-500/30" : ""}`}
           onClick={() => handleLineClick(lineNumber)}
         >
           {lineNumber}
-          {hasComments && <span className="ml-1 text-blue-500">●</span>}
+          {hasComments && !commentsHidden && <span className="ml-1 text-blue-500">●</span>}
         </div>
       );
 
       // Add empty line numbers for comment space
-      if (hasComments || isSelected) {
+      if ((hasComments || isSelected) && !commentsHidden) {
         const emptyLines = calculateEmptyLines(lineNumber);
         for (let j = 0; j < emptyLines; j++) {
           lineNumbers.push(
@@ -237,6 +238,23 @@ export function CodeViewer({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setCommentsHidden(!commentsHidden)}
+          >
+            {commentsHidden ? (
+              <>
+                <Eye className="h-4 w-4 mr-2" />
+                Show Comments
+              </>
+            ) : (
+              <>
+                <EyeOff className="h-4 w-4 mr-2" />
+                Hide Comments
+              </>
+            )}
+          </Button>
           <Button variant="outline" size="sm" onClick={handleCopy}>
             <Copy className="h-4 w-4 mr-2" />
             Copy Code
@@ -287,8 +305,8 @@ export function CodeViewer({
                         {/* Code line */}
                         <div
                           className={`cursor-pointer hover:bg-muted/50 px-2 py-0 rounded transition-colors ${
-                            lineComments.length > 0 ? "bg-blue-500/10" : ""
-                          } ${isSelected ? "bg-blue-500/20" : ""}`}
+                            lineComments.length > 0 && !commentsHidden ? "bg-blue-500/10" : ""
+                          } ${isSelected && !commentsHidden ? "bg-blue-500/20" : ""}`}
                           onClick={() => handleLineClick(lineNumber)}
                         >
                           <div
@@ -301,7 +319,7 @@ export function CodeViewer({
                         </div>
 
                         {/* Inline comments */}
-                        {(lineComments.length > 0 || isSelected) && (
+                        {(lineComments.length > 0 || isSelected) && !commentsHidden && (
                           <InlineComment
                             comments={lineComments}
                             onAddComment={async (text, authorName) => {
