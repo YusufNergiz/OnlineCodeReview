@@ -58,9 +58,8 @@ export default function HomePage() {
 
         <div className="text-center mb-8">
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Share your JavaScript code with your team for review. Paste your
-            code, get a shareable link, and collaborate with line-by-line
-            comments.
+            Share your code with your team for review. Paste your code, get a
+            shareable link, and collaborate with line-by-line comments.
           </p>
         </div>
 
