@@ -56,7 +56,8 @@ export function CodeViewer({
   const { theme } = useTheme();
   const supabase = createClient();
 
-  const codeLines = codeSnippet.code.split("\n");
+  // Ensure we preserve all whitespace and line breaks
+  const codeLines = codeSnippet.code.replace(/\r\n/g, '\n').split("\n");
 
   // Apply syntax highlighting
   useEffect(() => {
@@ -97,7 +98,9 @@ export function CodeViewer({
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(codeSnippet.code);
+      // Ensure we preserve all whitespace and formatting from the original code
+      const formattedCode = codeSnippet.code.replace(/\r\n/g, '\n');
+      await navigator.clipboard.writeText(formattedCode);
       toast.success("Code copied to clipboard!");
     } catch (err) {
       console.error("Failed to copy code:", err);
@@ -294,7 +297,7 @@ export function CodeViewer({
                 className="flex-1 overflow-y-auto"
                 onScroll={handleScroll}
               >
-                <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
+                <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent whitespace-pre">
                   {codeLines.map((line, index) => {
                     const lineNumber = index + 1;
                     const lineComments = commentsByLine[lineNumber] || [];
@@ -310,7 +313,7 @@ export function CodeViewer({
                           onClick={() => handleLineClick(lineNumber)}
                         >
                           <div
-                            className="shiki-line"
+                            className="shiki-line whitespace-pre"
                             dangerouslySetInnerHTML={{
                               __html:
                                 highlightedCode.split("\n")[index] || "&nbsp;",
