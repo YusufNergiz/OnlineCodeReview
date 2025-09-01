@@ -337,7 +337,7 @@ export function CodeViewer({
             onClick={() => theme === "dark" ? setTheme("light") : setTheme("dark")}
             className="flex-1 sm:flex-none"
           >
-            {theme === "dark" ? "🌞" : "🌙"}
+            {isClient ? (theme === "dark" ? "🌞" : "🌙") : "🌙"}
           </Button>
         </div>
       </div>
