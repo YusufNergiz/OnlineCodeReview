@@ -6,7 +6,14 @@ import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Copy, MessageSquare, Share2, ArrowLeft, Eye, EyeOff } from "lucide-react";
+import {
+  Copy,
+  MessageSquare,
+  Share2,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { InlineComment } from "@/components/inline-comment";
@@ -56,48 +63,69 @@ export function CodeViewer({
   const supabase = createClient();
 
   // Ensure we preserve all whitespace and line breaks - memoized to prevent unnecessary re-renders
-  const codeLines = useMemo(() => 
-    codeSnippet.code.replace(/\r\n/g, '\n').split("\n"), 
+  const codeLines = useMemo(
+    () => codeSnippet.code.replace(/\r\n/g, "\n").split("\n"),
     [codeSnippet.code]
   );
 
+  // Simple text escaping for safe display (fallback when highlighting isn't ready)
+  const escapeHtml = (text: string) => {
+    return text
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  };
+
   // Syntax highlighting for individual lines
   const [highlightedLines, setHighlightedLines] = useState<string[]>([]);
+  const [isClient, setIsClient] = useState(false);
+
+  // Ensure we're on the client side before running syntax highlighting
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
+    // Only run syntax highlighting on the client side
+    if (!isClient) return;
+
     const highlightLines = async () => {
       try {
         // Use the cached highlighter from the existing syntax-highlight.ts
-        const { getShikiHighlighter } = await import('@/lib/syntax-highlight');
+        const { getShikiHighlighter } = await import("@/lib/syntax-highlight");
         const highlighter = await getShikiHighlighter();
 
-        const highlighted = codeLines.map(line => {
+        const highlighted = codeLines.map((line) => {
           try {
             // Highlight each line individually
             const html = highlighter.codeToHtml(line, {
               lang: codeSnippet.language as any,
               theme: theme === "dark" ? "github-dark" : "github-light",
             });
-            
+
             // Extract just the content from the HTML (remove pre/code tags)
-            const content = html.replace(/<pre[^>]*>.*?<code[^>]*>/, '').replace(/<\/code>.*?<\/pre>/, '');
+            const content = html
+              .replace(/<pre[^>]*>.*?<code[^>]*>/, "")
+              .replace(/<\/code>.*?<\/pre>/, "");
             return content || line;
           } catch {
             // Fallback to plain text if highlighting fails
             return line;
           }
         });
-        
+
         setHighlightedLines(highlighted);
       } catch (error) {
-        console.error('Failed to load syntax highlighter:', error);
+        console.error("Failed to load syntax highlighter:", error);
         // Fallback to plain text
         setHighlightedLines(codeLines);
       }
     };
 
     highlightLines();
-  }, [codeSnippet.code, codeSnippet.language, theme]); // Removed codeLines from dependencies since it's now memoized
+  }, [isClient, codeSnippet.code, codeSnippet.language, theme]); // Added isClient to dependencies
 
   // Group comments by line number
   const commentsByLine = comments.reduce((acc, comment) => {
@@ -125,7 +153,7 @@ export function CodeViewer({
   const handleCopy = async () => {
     try {
       // Ensure we preserve all whitespace and formatting from the original code
-      const formattedCode = codeSnippet.code.replace(/\r\n/g, '\n');
+      const formattedCode = codeSnippet.code.replace(/\r\n/g, "\n");
       await navigator.clipboard.writeText(formattedCode);
       toast.success("Code copied to clipboard!");
     } catch (err) {
@@ -219,19 +247,24 @@ export function CodeViewer({
         <div
           key={`line-${lineNumber}`}
           className={`text-right min-w-[3rem] cursor-pointer hover:bg-muted/70 px-2 py-0 rounded transition-colors ${
-            hasComments && !commentsHidden ? "bg-blue-500/20 text-blue-600 font-semibold" : ""
+            hasComments && !commentsHidden
+              ? "bg-blue-500/20 text-blue-600 font-semibold"
+              : ""
           } ${isSelected && !commentsHidden ? "bg-blue-500/30" : ""}`}
           onClick={() => handleLineClick(lineNumber)}
         >
           {lineNumber}
-          {hasComments && !commentsHidden && <span className="ml-1 text-blue-500">●</span>}
+          {hasComments && !commentsHidden && (
+            <span className="ml-1 text-blue-500">●</span>
+          )}
         </div>
       );
 
       // Add empty line numbers for comment space
       if ((hasComments || isSelected) && !commentsHidden) {
         const emptyLines = calculateEmptyLines(lineNumber);
-        for (let j = 0; j < emptyLines; j++) {
+        for (let j = 0; j < emptyLines + 1; j++) {
+          // One extra line to ensure the code line and line number are in the same line
           lineNumbers.push(
             <div
               key={`empty-${lineNumber}-${j}`}
@@ -267,9 +300,9 @@ export function CodeViewer({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setCommentsHidden(!commentsHidden)}
           >
             {commentsHidden ? (
@@ -334,37 +367,51 @@ export function CodeViewer({
                         {/* Code line */}
                         <div
                           className={`cursor-pointer hover:bg-muted/50 px-2 py-0 rounded transition-colors ${
-                            lineComments.length > 0 && !commentsHidden ? "bg-blue-500/10" : ""
-                          } ${isSelected && !commentsHidden ? "bg-blue-500/20" : ""}`}
+                            lineComments.length > 0 && !commentsHidden
+                              ? "bg-blue-500/10"
+                              : ""
+                          } ${
+                            isSelected && !commentsHidden
+                              ? "bg-blue-500/20"
+                              : ""
+                          }`}
                           onClick={() => handleLineClick(lineNumber)}
                         >
                           <div
                             className="whitespace-pre"
-                            style={{ minHeight: '24px', display: 'flex', alignItems: 'center' }}
-                            dangerouslySetInnerHTML={{ 
-                              __html: highlightedLines[index] || line || '\u00A0' 
+                            style={{
+                              minHeight: "24px",
+                              display: "flex",
+                              alignItems: "center",
+                            }}
+                            dangerouslySetInnerHTML={{
+                              __html:
+                                isClient && highlightedLines[index]
+                                  ? highlightedLines[index]
+                                  : escapeHtml(line) || "\u00A0",
                             }}
                           />
                         </div>
 
                         {/* Inline comments */}
-                        {(lineComments.length > 0 || isSelected) && !commentsHidden && (
-                          <InlineComment
-                            comments={lineComments}
-                            onAddComment={async (text, authorName) => {
-                              await handleAddComment(
-                                lineNumber,
-                                text,
-                                authorName
-                              );
-                            }}
-                            onCancel={() => setSelectedLine(null)}
-                            isNew={isSelected}
-                            onHeightChange={(height) =>
-                              handleCommentHeightChange(lineNumber, height)
-                            }
-                          />
-                        )}
+                        {(lineComments.length > 0 || isSelected) &&
+                          !commentsHidden && (
+                            <InlineComment
+                              comments={lineComments}
+                              onAddComment={async (text, authorName) => {
+                                await handleAddComment(
+                                  lineNumber,
+                                  text,
+                                  authorName
+                                );
+                              }}
+                              onCancel={() => setSelectedLine(null)}
+                              isNew={isSelected}
+                              onHeightChange={(height) =>
+                                handleCommentHeightChange(lineNumber, height)
+                              }
+                            />
+                          )}
                       </div>
                     );
                   })}
