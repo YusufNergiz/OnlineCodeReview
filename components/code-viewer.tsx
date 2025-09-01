@@ -59,7 +59,7 @@ export function CodeViewer({
   const [commentsHidden, setCommentsHidden] = useState(false);
   const lineNumbersRef = useRef<HTMLDivElement>(null);
   const codeRef = useRef<HTMLDivElement>(null);
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
   const supabase = createClient();
 
   // Ensure we preserve all whitespace and line breaks - memoized to prevent unnecessary re-renders
@@ -324,6 +324,13 @@ export function CodeViewer({
           <Button size="sm" onClick={handleShare}>
             <Share2 className="h-4 w-4 mr-2" />
             Copy Link
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => theme === "dark" ? setTheme("light") : setTheme("dark")}
+          >
+            {theme === "dark" ? "🌞" : "🌙"}
           </Button>
         </div>
       </div>
