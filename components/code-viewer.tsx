@@ -279,18 +279,19 @@ export function CodeViewer({
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto">
+    <div className="w-full max-w-7xl mx-auto px-4 sm:px-6">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4">
         <div className="flex items-center gap-4">
           <Link href="/">
             <Button variant="outline" size="sm">
               <ArrowLeft className="h-4 w-4 mr-2" />
-              New Review
+              <span className="hidden sm:inline">New Review</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-foreground">
+            <h1 className="text-xl sm:text-2xl font-bold text-foreground">
               {codeSnippet.title}
             </h1>
             <p className="text-sm text-muted-foreground">
@@ -299,36 +300,42 @@ export function CodeViewer({
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
             size="sm"
             onClick={() => setCommentsHidden(!commentsHidden)}
+            className="flex-1 sm:flex-none"
           >
             {commentsHidden ? (
               <>
                 <Eye className="h-4 w-4 mr-2" />
-                Show Comments
+                <span className="hidden sm:inline">Show Comments</span>
+                <span className="sm:hidden">Show</span>
               </>
             ) : (
               <>
                 <EyeOff className="h-4 w-4 mr-2" />
-                Hide Comments
+                <span className="hidden sm:inline">Hide Comments</span>
+                <span className="sm:hidden">Hide</span>
               </>
             )}
           </Button>
-          <Button variant="outline" size="sm" onClick={handleCopy}>
+          <Button variant="outline" size="sm" onClick={handleCopy} className="flex-1 sm:flex-none">
             <Copy className="h-4 w-4 mr-2" />
-            Copy Code
+            <span className="hidden sm:inline">Copy Code</span>
+            <span className="sm:hidden">Copy</span>
           </Button>
-          <Button size="sm" onClick={handleShare}>
+          <Button size="sm" onClick={handleShare} className="flex-1 sm:flex-none">
             <Share2 className="h-4 w-4 mr-2" />
-            Copy Link
+            <span className="hidden sm:inline">Copy Link</span>
+            <span className="sm:hidden">Share</span>
           </Button>
           <Button
             variant="outline"
             size="sm"
             onClick={() => theme === "dark" ? setTheme("light") : setTheme("dark")}
+            className="flex-1 sm:flex-none"
           >
             {theme === "dark" ? "🌞" : "🌙"}
           </Button>
@@ -338,7 +345,7 @@ export function CodeViewer({
       {/* Code Display */}
       <Card>
         <CardHeader className="pb-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
             <Badge variant="secondary">{codeSnippet.language}</Badge>
             <div className="text-sm text-muted-foreground">
               {codeLines.length} lines • {codeSnippet.code.length} characters
@@ -353,17 +360,17 @@ export function CodeViewer({
                 minHeight: "600px",
               }}
             >
-              {/* Line numbers */}
+              {/* Line numbers - hidden on mobile for better space usage */}
               <div
                 ref={lineNumbersRef}
-                className="flex-shrink-0 bg-muted/50 text-muted-foreground text-sm font-mono leading-6 px-3 py-4 select-none overflow-y-auto"
+                className="hidden sm:block flex-shrink-0 bg-muted/50 text-muted-foreground text-sm font-mono leading-6 px-3 py-4 select-none overflow-y-auto"
                 onScroll={handleScroll}
               >
                 {generateLineNumbers()}
               </div>
 
               {/* Code content */}
-              <div ref={codeRef} className="flex-1" onScroll={handleScroll}>
+              <div ref={codeRef} className="flex-1 overflow-y-auto sm:overflow-visible" onScroll={handleScroll}>
                 <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
                   {codeLines.map((line, index) => {
                     const lineNumber = index + 1;
