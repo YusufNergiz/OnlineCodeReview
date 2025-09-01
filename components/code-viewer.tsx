@@ -340,7 +340,12 @@ export function CodeViewer({
         </CardHeader>
         <CardContent className="p-0">
           <div className="relative border rounded-lg overflow-hidden bg-muted/30">
-            <div className="flex max-h-[600px] overflow-hidden">
+            <div
+              className="flex overflow-hidden"
+              style={{
+                minHeight: "600px",
+              }}
+            >
               {/* Line numbers */}
               <div
                 ref={lineNumbersRef}
@@ -351,11 +356,7 @@ export function CodeViewer({
               </div>
 
               {/* Code content */}
-              <div
-                ref={codeRef}
-                className="flex-1 overflow-y-auto"
-                onScroll={handleScroll}
-              >
+              <div ref={codeRef} className="flex-1" onScroll={handleScroll}>
                 <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
                   {codeLines.map((line, index) => {
                     const lineNumber = index + 1;
