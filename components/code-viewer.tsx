@@ -2,7 +2,7 @@
 
 import type React from "react";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -46,7 +46,6 @@ export function CodeViewer({
 }: CodeViewerProps) {
   const [selectedLine, setSelectedLine] = useState<number | null>(null);
   const [comments, setComments] = useState(initialComments);
-  const [highlightedCode, setHighlightedCode] = useState("");
   const [commentHeights, setCommentHeights] = useState<Record<number, number>>(
     {}
   );
@@ -56,22 +55,49 @@ export function CodeViewer({
   const { theme } = useTheme();
   const supabase = createClient();
 
-  // Ensure we preserve all whitespace and line breaks
-  const codeLines = codeSnippet.code.replace(/\r\n/g, '\n').split("\n");
+  // Ensure we preserve all whitespace and line breaks - memoized to prevent unnecessary re-renders
+  const codeLines = useMemo(() => 
+    codeSnippet.code.replace(/\r\n/g, '\n').split("\n"), 
+    [codeSnippet.code]
+  );
 
-  // Apply syntax highlighting
+  // Syntax highlighting for individual lines
+  const [highlightedLines, setHighlightedLines] = useState<string[]>([]);
+
   useEffect(() => {
-    const highlight = async () => {
-      const html = await highlightCode({
-        code: codeSnippet.code,
-        lang: codeSnippet.language as any,
-        theme: theme === "dark" ? "github-dark" : "github-light",
-        lineNumbers: false,
-      });
-      setHighlightedCode(html);
+    const highlightLines = async () => {
+      try {
+        // Use the cached highlighter from the existing syntax-highlight.ts
+        const { getShikiHighlighter } = await import('@/lib/syntax-highlight');
+        const highlighter = await getShikiHighlighter();
+
+        const highlighted = codeLines.map(line => {
+          try {
+            // Highlight each line individually
+            const html = highlighter.codeToHtml(line, {
+              lang: codeSnippet.language as any,
+              theme: theme === "dark" ? "github-dark" : "github-light",
+            });
+            
+            // Extract just the content from the HTML (remove pre/code tags)
+            const content = html.replace(/<pre[^>]*>.*?<code[^>]*>/, '').replace(/<\/code>.*?<\/pre>/, '');
+            return content || line;
+          } catch {
+            // Fallback to plain text if highlighting fails
+            return line;
+          }
+        });
+        
+        setHighlightedLines(highlighted);
+      } catch (error) {
+        console.error('Failed to load syntax highlighter:', error);
+        // Fallback to plain text
+        setHighlightedLines(codeLines);
+      }
     };
-    highlight();
-  }, [codeSnippet.code, codeSnippet.language, theme]);
+
+    highlightLines();
+  }, [codeSnippet.code, codeSnippet.language, theme]); // Removed codeLines from dependencies since it's now memoized
 
   // Group comments by line number
   const commentsByLine = comments.reduce((acc, comment) => {
@@ -297,7 +323,7 @@ export function CodeViewer({
                 className="flex-1 overflow-y-auto"
                 onScroll={handleScroll}
               >
-                <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent whitespace-pre">
+                <div className="p-4 text-sm font-mono leading-6 text-foreground [&_pre]:!bg-transparent">
                   {codeLines.map((line, index) => {
                     const lineNumber = index + 1;
                     const lineComments = commentsByLine[lineNumber] || [];
@@ -313,10 +339,10 @@ export function CodeViewer({
                           onClick={() => handleLineClick(lineNumber)}
                         >
                           <div
-                            className="shiki-line whitespace-pre"
-                            dangerouslySetInnerHTML={{
-                              __html:
-                                highlightedCode.split("\n")[index] || "&nbsp;",
+                            className="whitespace-pre"
+                            style={{ minHeight: '24px', display: 'flex', alignItems: 'center' }}
+                            dangerouslySetInnerHTML={{ 
+                              __html: highlightedLines[index] || line || '\u00A0' 
                             }}
                           />
                         </div>
