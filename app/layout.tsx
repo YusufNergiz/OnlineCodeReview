@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   description:
     "Share JavaScript code with your team for review. Get shareable links and collaborate with line-by-line comments.",
   generator: "v0.app",
+  icons: {
+    icon: "/favicon.svg",
+    apple: "/favicon.svg",
+    shortcut: "/favicon.svg"
+  },
+  manifest: "/manifest.json",
 };
 
 // This is used to suppress the cz-shortcut-listen warning
