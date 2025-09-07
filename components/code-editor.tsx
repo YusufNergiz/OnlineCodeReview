@@ -110,7 +110,7 @@ export function CodeEditor({
                 <Code2 className="h-4 w-4 mr-2" />
                 <SelectValue placeholder="Language" />
               </SelectTrigger>
-              <SelectContent>
+              <SelectContent className="max-h-[300px] overflow-y-auto">
                 {supportedLanguages.map((lang) => (
                   <SelectItem key={lang} value={lang}>
                     {lang.charAt(0).toUpperCase() + lang.slice(1)}
